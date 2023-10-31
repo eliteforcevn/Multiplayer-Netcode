@@ -4,11 +4,17 @@ using UnityEngine;
 using UnityEngine.UI;
 using Unity.Netcode;
 
-public class NetworkUI : MonoBehaviour
+using TMPro;
+
+public class NetworkUI : NetworkBehaviour
 {
     public Button hostBtn;
     public Button serverBtn;
     public Button clientBtn;
+
+    public TextMeshProUGUI playerCount;
+
+    private NetworkVariable<int> playerNum = new();
 
     // Start is called before the first frame update
     void Start()
@@ -32,7 +38,10 @@ public class NetworkUI : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        if (!IsServer) return;
+
+        playerNum.Value = NetworkManager.Singleton.ConnectedClients.Count;
+        playerCount.text = $"Player: {playerNum.Value}";
     }
 
     public void HostButton()
