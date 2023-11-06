@@ -1,10 +1,19 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
 using Unity.Netcode;
+using Unity.Collections;
+
+using TMPro;
 
 public class PlayerMovement : NetworkBehaviour
 {
+    [SerializeField] Transform canvas;
+    public TextMeshProUGUI playerNumNameText;
+    [SerializeField] private NetworkVariable<FixedString128Bytes> networkPlayerNumName = new NetworkVariable<FixedString128Bytes>(
+        "Player: -", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
     public float moveSpeed = 5f;
 
     public float rotationSpeed = 240f;
@@ -50,13 +59,31 @@ public class PlayerMovement : NetworkBehaviour
         }
     }
 
+    private void LateUpdate()
+    {
+        CanvasLookCamera();
+    }
+
+    void CanvasLookCamera()
+    {
+        canvas.LookAt(canvas.position + Camera.main.transform.forward);
+    }
+
     public override void OnNetworkSpawn()
+    {
+        networkPlayerNumName.Value = "Player: " + (OwnerClientId);
+        playerNumNameText.text = networkPlayerNumName.Value.ToString();
+
+        SetRandomSpawnPositionServerRpc();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    void SetRandomSpawnPositionServerRpc()
     {
         float ranX = Random.Range(positionRange, -positionRange);
         float ranZ = Random.Range(positionRange, -positionRange);
 
         transform.position = new Vector3(ranX, 0f, ranZ);
-
         transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 180f), 0f);
     }
 
@@ -64,19 +91,30 @@ public class PlayerMovement : NetworkBehaviour
     void SpawnBulletServerRpc()
     {
         Bullet go = Instantiate(bulletPrefab, spawnBulletPoint.position, spawnBulletPoint.rotation);
-        go.shootAuthor = this;
         go.GetComponent<NetworkObject>().Spawn();
+        go.SetShootAuthorServerRpc(this, default);
 
         spawnedBulletList.Add(go);
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void DestroyBulletServerRpc()
+    public void DestroyBulletServerRpc(NetworkBehaviourReference referrence, ServerRpcParams serverRpcParams)
     {
-        Bullet bullet = spawnedBulletList[0];
-        bullet.GetComponent<NetworkObject>().Despawn();
-        spawnedBulletList.Remove(bullet);
+        ulong clientId = serverRpcParams.Receive.SenderClientId;
 
-        Destroy(bullet.gameObject);
+        if (referrence.TryGet<Bullet>(out Bullet bullet))
+        {
+            bullet.GetComponent<NetworkObject>().Despawn();
+            spawnedBulletList.Remove(bullet);
+
+            Destroy(bullet.gameObject);
+
+            //bullet.NetworkObject.ChangeOwnership(clientId);
+            //Debug.Log("SERVER: " + clientId + " change owner ship");
+        }
+        else
+        {
+            Debug.LogError("Didn't get Bullet");
+        }
     }
 }

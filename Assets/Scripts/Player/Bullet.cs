@@ -6,7 +6,8 @@ using Unity.Netcode;
 
 public class Bullet : NetworkBehaviour
 {
-    public PlayerMovement shootAuthor;
+    [SerializeField]
+    PlayerMovement shootAuthor;
 
     float bulletSpped = 10f;
 
@@ -19,6 +20,8 @@ public class Bullet : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (IsServer == false) return;
+
         transform.position += transform.forward * bulletSpped * Time.deltaTime;
     }
 
@@ -26,6 +29,37 @@ public class Bullet : NetworkBehaviour
     {
         if (IsOwner == false) return;
 
-        shootAuthor.DestroyBulletServerRpc();
+        if(other.GetComponent<PlayerMovement>() == null)
+        {
+            shootAuthor.DestroyBulletServerRpc(this, default);
+        }
+    }
+
+    [ServerRpc]
+    public void SetShootAuthorServerRpc(NetworkBehaviourReference referrence, ServerRpcParams serverRpcParams)
+    {
+        ulong clientId = serverRpcParams.Receive.SenderClientId;
+
+        if (referrence.TryGet<PlayerMovement>(out PlayerMovement playerMovement))
+        {
+            SetShootAuthorClientRpc(playerMovement, default);
+        }
+        else
+        {
+            Debug.LogError("Didn't get PlayerMovement");
+        }
+    }
+
+    [ClientRpc]
+    public void SetShootAuthorClientRpc(NetworkBehaviourReference referrence, ClientRpcParams clientRpcParams)
+    {
+        if (referrence.TryGet<PlayerMovement>(out PlayerMovement playerMovement))
+        {
+            shootAuthor = playerMovement;
+        }
+        else
+        {
+            Debug.LogError("Didn't get PlayerMovement");
+        }
     }
 }
