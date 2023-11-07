@@ -2,6 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+
+using TMPro;
 
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -18,40 +21,62 @@ public class MissionManager : NetworkBehaviour
 
     public List<DropBox> spawnnedList = new();
 
-    public List<string> MissionCollectList = new();
+    public string collectBoxName = string.Empty;
 
-    public bool spawnBoxes = false;
+    public TextMeshProUGUI missionCollectText;
 
     // Start is called before the first frame update
     void Start()
     {
+        NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+
+        NetworkManager.Singleton.OnServerStarted += OnserverStarted;
+
         UnityTransport unityTransport = NetworkManager.Singleton.GetComponent<UnityTransport>();
-
         Debug.Log("UnityTransport: " + unityTransport);
-
         unityTransport.OnTransportEvent += OnTransportEvent;
-    }
-
-    private void OnTransportEvent(NetworkEvent eventType, ulong clientId, ArraySegment<byte> payload, float receiveTime)
-    {
-        Debug.Log("OnTransportEvent: " + eventType);
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (spawnBoxes)
-        {
-            spawnBoxes = false;
 
-            SpawnDropBoxesServerRpc();
+    }
+
+    public override void OnNetworkSpawn()
+    {
+
+    }
+
+    public void OnserverStarted()
+    {
+        ServerOnlySpawnBoxes();
+
+        ServerOnlySetMission();
+    }
+
+    public void OnTransportEvent(NetworkEvent eventType, ulong clientId, ArraySegment<byte> payload, float receiveTime)
+    {
+        Debug.Log("OnTransportEvent: " + eventType);
+    }
+
+    public void OnClientConnected(ulong clientId)
+    {
+        Debug.Log($"OnClientConnected id = {clientId}");
+
+        if (clientId == NetworkManager.Singleton.LocalClientId)
+        {
+            CorrectSpawnedBoxesServerRpc();
+
+            CorrectMissionServerRpc();
         }
     }
 
-    [ServerRpc]
-    void SpawnDropBoxesServerRpc()
+    #region Server only
+
+    void ServerOnlySpawnBoxes()
     {
-        foreach(DropBox box in dropBoxePrefabs)
+        foreach (DropBox box in dropBoxePrefabs)
         {
             Debug.Log($"Spawn go = {box.boxName}");
 
@@ -60,20 +85,34 @@ public class MissionManager : NetworkBehaviour
             spawnGo.missionManager = this;
             spawnGo.GetComponent<NetworkObject>().Spawn();
 
-            AddSpawnedBoxServerRpc(spawnGo, default);
+            spawnnedList.Add(spawnGo);
         }
     }
 
-    [ServerRpc]
-    void AddSpawnedBoxServerRpc(NetworkBehaviourReference referrence, ServerRpcParams serverRpcParams)
+    void ServerOnlySetMission()
     {
-        if (referrence.TryGet<DropBox>(out DropBox dropBox))
+        collectBoxName = "No mission";
+
+        if(spawnnedList.Count > 0)
         {
-            AddSpawnedBoxClientRpc(dropBox, default);
+            int ranNnum = UnityEngine.Random.Range(0, spawnnedList.Count);
+
+            collectBoxName = spawnnedList[ranNnum].boxName;
         }
-        else
+    }
+
+    #endregion Server only
+
+    #region Client
+
+    [ServerRpc(RequireOwnership = false)]
+    void CorrectSpawnedBoxesServerRpc()
+    {
+        Debug.Log("CorrectSpawnedBoxesServerRpc");
+
+        foreach (DropBox box in spawnnedList)
         {
-            Debug.LogError("Didn't get DropBox");
+            AddSpawnedBoxClientRpc(box, default);
         }
     }
 
@@ -82,13 +121,35 @@ public class MissionManager : NetworkBehaviour
     {
         if (referrence.TryGet<DropBox>(out DropBox dropBox))
         {
-            spawnnedList.Add(dropBox);
+            if (spawnnedList.Contains(dropBox) == false)
+            {
+                if(dropBox.missionManager == null)
+                {
+                    dropBox.missionManager = this;
+                }
+
+                spawnnedList.Add(dropBox);
+            }
         }
         else
         {
             Debug.LogError("Didn't get DropBox");
         }
     }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void CorrectMissionServerRpc()
+    {
+        CorrectMissionClientRpc(collectBoxName);
+    }
+
+    [ClientRpc]
+    public void CorrectMissionClientRpc(string findBoxName)
+    {
+        collectBoxName = findBoxName;
+    }
+
+    #endregion Client
 
     public void SetRandomSpawnPosition(Transform go)
     {

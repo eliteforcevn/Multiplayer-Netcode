@@ -40,8 +40,21 @@ public class NetworkUI : NetworkBehaviour
     {
         if (!IsServer) return;
 
+        SetPlayerCountServerRpc();
+    }
+
+    [ServerRpc]
+    public void SetPlayerCountServerRpc()
+    {
         playerNum.Value = NetworkManager.Singleton.ConnectedClients.Count;
-        playerCount.text = $"Player: {playerNum.Value}";
+
+        SetPlayerCountClientRpc(playerNum.Value);
+    }
+
+    [ClientRpc]
+    public void SetPlayerCountClientRpc(int num)
+    {
+        playerCount.text = $"Player: {num}";
     }
 
     public void HostButton()

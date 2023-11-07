@@ -10,8 +10,10 @@ public class DropBox : NetworkBehaviour
 
     public string boxName = "";
 
-    private void Start()
+    public override void OnNetworkSpawn()
     {
+        if (!IsServer) return;
+
         missionManager.SetRandomSpawnPosition(transform);
     }
 

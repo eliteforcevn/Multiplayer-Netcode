@@ -35,19 +35,11 @@ public class Bullet : NetworkBehaviour
         }
     }
 
-    [ServerRpc]
-    public void SetShootAuthorServerRpc(NetworkBehaviourReference referrence, ServerRpcParams serverRpcParams)
+    public void SetAuthor(PlayerMovement playerMovement)
     {
-        ulong clientId = serverRpcParams.Receive.SenderClientId;
+        shootAuthor = playerMovement;
 
-        if (referrence.TryGet<PlayerMovement>(out PlayerMovement playerMovement))
-        {
-            SetShootAuthorClientRpc(playerMovement, default);
-        }
-        else
-        {
-            Debug.LogError("Didn't get PlayerMovement");
-        }
+        SetShootAuthorClientRpc(playerMovement, default);
     }
 
     [ClientRpc]

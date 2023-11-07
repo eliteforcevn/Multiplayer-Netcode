@@ -92,7 +92,7 @@ public class PlayerMovement : NetworkBehaviour
     {
         Bullet go = Instantiate(bulletPrefab, spawnBulletPoint.position, spawnBulletPoint.rotation);
         go.GetComponent<NetworkObject>().Spawn();
-        go.SetShootAuthorServerRpc(this, default);
+        go.SetAuthor(this);
 
         spawnedBulletList.Add(go);
     }
