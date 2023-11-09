@@ -98,6 +98,8 @@ public class MissionManager : NetworkBehaviour
             int ranNnum = UnityEngine.Random.Range(0, spawnnedList.Count);
 
             collectBoxName = spawnnedList[ranNnum].boxName;
+
+            missionCollectText.text = "Mission collect target = " + collectBoxName;
         }
     }
 
@@ -147,6 +149,8 @@ public class MissionManager : NetworkBehaviour
     public void CorrectMissionClientRpc(string findBoxName)
     {
         collectBoxName = findBoxName;
+
+        missionCollectText.text = "Mission collect target = " + collectBoxName;
     }
 
     #endregion Client

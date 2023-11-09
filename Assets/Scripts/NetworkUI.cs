@@ -38,23 +38,25 @@ public class NetworkUI : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (!IsServer) return;
-
-        SetPlayerCountServerRpc();
+        ServerOnlySetPlayerCount();
     }
 
-    [ServerRpc]
-    public void SetPlayerCountServerRpc()
+    public void ServerOnlySetPlayerCount()
     {
-        playerNum.Value = NetworkManager.Singleton.ConnectedClients.Count;
+        if (IsServer)
+        {
+            playerNum.Value = NetworkManager.Singleton.ConnectedClients.Count;
 
-        SetPlayerCountClientRpc(playerNum.Value);
+            playerCount.text = $"Player: {playerNum.Value}";
+        }
+
+        SetPlayerCountClientRpc();
     }
 
     [ClientRpc]
-    public void SetPlayerCountClientRpc(int num)
+    public void SetPlayerCountClientRpc()
     {
-        playerCount.text = $"Player: {num}";
+        playerCount.text = $"Player: {playerNum.Value}";
     }
 
     public void HostButton()

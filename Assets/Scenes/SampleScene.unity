@@ -1200,8 +1200,8 @@ MonoBehaviour:
   - {fileID: 2151693739453428772, guid: 6756b35ecd5309145bfbf328ff084ec3, type: 3}
   - {fileID: 275270781823423104, guid: c8ddeeb7420e78d449ee7c3fd377a2de, type: 3}
   spawnnedList: []
-  MissionCollectList: []
-  spawnBoxes: 0
+  collectBoxName: 
+  missionCollectText: {fileID: 1146523519}
 --- !u!4 &961996766
 Transform:
   m_ObjectHideFlags: 0
