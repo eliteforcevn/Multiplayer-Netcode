@@ -92,25 +92,46 @@ public class PlayerMovement : NetworkBehaviour
     {
         Bullet go = Instantiate(bulletPrefab, spawnBulletPoint.position, spawnBulletPoint.rotation);
         go.GetComponent<NetworkObject>().Spawn();
-        go.SetAuthor(this);
 
         spawnedBulletList.Add(go);
+        SpawnBulletClientRpc(go, default);
+
+        go.SetAuthor(this);
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void DestroyBulletServerRpc(NetworkBehaviourReference referrence, ServerRpcParams serverRpcParams)
+    [ClientRpc]
+    void SpawnBulletClientRpc(NetworkBehaviourReference referrence, ClientRpcParams clientRpcParams)
     {
-        ulong clientId = serverRpcParams.Receive.SenderClientId;
-
         if (referrence.TryGet<Bullet>(out Bullet bullet))
         {
-            bullet.GetComponent<NetworkObject>().Despawn();
+            spawnedBulletList.Add(bullet);
+        }
+        else
+        {
+            Debug.LogError("Didn't get Bullet");
+        }
+    }
+
+    public void ServerOnlyDestroyBullet(Bullet bullet)
+    {
+        if (IsServer)
+        {
             spawnedBulletList.Remove(bullet);
 
-            Destroy(bullet.gameObject);
+            DestroyBulletClientRpc(bullet, default);
 
-            //bullet.NetworkObject.ChangeOwnership(clientId);
-            //Debug.Log("SERVER: " + clientId + " change owner ship");
+            bullet.GetComponent<NetworkObject>().Despawn();
+
+            Destroy(bullet.gameObject);
+        }
+    }
+
+    [ClientRpc]
+    public void DestroyBulletClientRpc(NetworkBehaviourReference referrence, ClientRpcParams clientRpcParams)
+    {
+        if (referrence.TryGet<Bullet>(out Bullet bullet))
+        {
+            spawnedBulletList.Remove(bullet);
         }
         else
         {

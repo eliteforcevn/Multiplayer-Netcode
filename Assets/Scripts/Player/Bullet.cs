@@ -31,7 +31,7 @@ public class Bullet : NetworkBehaviour
 
         if(other.GetComponent<PlayerMovement>() == null)
         {
-            shootAuthor.DestroyBulletServerRpc(this, default);
+            shootAuthor.ServerOnlyDestroyBullet(this);
         }
     }
 
